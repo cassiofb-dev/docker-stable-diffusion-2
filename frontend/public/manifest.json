@@ -1,6 +1,6 @@
 {
-  "short_name": "DALL-E Playground",
-  "name": "DALL-E Playground",
+  "short_name": "Stable Diffusion 2 Playground",
+  "name": "Stable Diffusion 2 Playground",
   "icons": [],
   "start_url": ".",
   "display": "standalone",

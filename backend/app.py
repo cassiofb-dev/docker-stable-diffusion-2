@@ -1,9 +1,10 @@
 import argparse
 import base64
+import time
 import os
+
 from pathlib import Path
 from io import BytesIO
-import time
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS, cross_origin
@@ -11,9 +12,14 @@ from stable_diffusion_wrapper import StableDiffusionWrapper
 from consts import DEFAULT_IMG_OUTPUT_DIR, MAX_FILE_NAME_LEN
 from utils import parse_arg_boolean
 
+import jax
+jax.config.update('jax_platform_name', 'cpu')
+
 app = Flask(__name__)
+
 CORS(app)
-print("--> Starting the image generation server. This might take up to two minutes.")
+
+print("--> Starting the image generation server. This might take up to two minutes.\n")
 
 stable_diff_model = None
 
@@ -22,6 +28,7 @@ parser.add_argument("--port", type=int, default=8000, help = "backend port")
 parser.add_argument("--save_to_disk", type = parse_arg_boolean, default = False, help = "Should save generated images to disk")
 parser.add_argument("--img_format", type = str.lower, default = "JPEG", help = "Generated images format", choices=['jpeg', 'png'])
 parser.add_argument("--output_dir", type = str, default = DEFAULT_IMG_OUTPUT_DIR, help = "Customer directory for generated images")
+
 args = parser.parse_args()
 
 @app.route("/generate", methods=["POST"])
@@ -36,7 +43,7 @@ def generate_images_api():
     if args.save_to_disk:
         dir_name = os.path.join(args.output_dir,f"{time.strftime('%Y-%m-%d_%H-%M-%S')}_{text_prompt}")[:MAX_FILE_NAME_LEN]
         Path(dir_name).mkdir(parents=True, exist_ok=True)
-    
+
     for idx, img in enumerate(generated_imgs):
         if args.save_to_disk: 
           img.save(os.path.join(dir_name, f'{idx}.{args.img_format}'), format=args.img_format)
@@ -47,17 +54,15 @@ def generate_images_api():
         returned_generated_images.append(img_str)
 
     print(f"Created {num_images} images from text prompt [{text_prompt}]")
-    
+
     response = {'generatedImgs': returned_generated_images,
     'generatedImgsFormat': args.img_format}
     return jsonify(response)
-
 
 @app.route("/", methods=["GET"])
 @cross_origin()
 def health_check():
     return jsonify(success=True)
-
 
 with app.app_context():
     stable_diff_model = StableDiffusionWrapper()

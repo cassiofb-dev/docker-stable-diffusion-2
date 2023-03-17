@@ -1,32 +1,29 @@
 version: '3'
 
-volumes:
-  app-cache:
-    driver: local
-
 services:
-  dalle-backend:
-    container_name: dalle-backend
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    restart: always
+  backend:
+    container_name: backend
+    image: python:3.9
+    working_dir: "/backend"
+    # command: tail -f /dev/null
+    command: sh -c "
+      python -m venv venv && . venv/bin/activate && pip install -U pip &&
+      pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu &&
+      pip install "jax[cpu]" diffusers transformers accelerate scipy safetensors &&
+      pip install Flask flask-cors flask-restful && python app.py --port 8080"
+    environment:
+      - HF_HOME=/backend/.cache
     ports:
       - 8080:8080
     volumes:
-      - app-cache:/root/.cache
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - capabilities: [ gpu ]
-  dalle-interface:
-    container_name: dalle-interface
-    build:
-      context: ./interface
-      dockerfile: Dockerfile
-    restart: always
+      - ./backend:/backend
+
+  frontend:
+    container_name: frontend
+    image: node:alpine
+    working_dir: "/frontend"
+    command: sh -c "npm i && npm start"
     ports:
       - 3000:3000
-    stdin_open: true
-    tty: true
+    volumes:
+      - ./frontend:/frontend
